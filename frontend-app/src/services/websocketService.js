@@ -1,20 +1,9 @@
-/**
- * websocketService.js
- * ---------------------
- * Thin wrapper around the native WebSocket API for the Voice-to-Notes
- * module. Handles connecting to the FastAPI /ws/transcribe endpoint,
- * sending binary PCM audio chunks, sending the "stop" control message,
- * and dispatching incoming partial/final transcript events to whoever
- * is listening (typically App.jsx).
- *
- * Kept framework-agnostic (no React imports) so it can be reused
- * outside this specific component tree if needed.
- */
+const STT_HOST = process.env.REACT_APP_STT_WS_HOST || "localhost:8000";
 
 const DEFAULT_WS_URL =
-  (window.location.protocol === "https:" ? "wss://" : "ws://") +
-  (process.env.REACT_APP_STT_WS_HOST || "localhost:8000") +
-  "/ws/transcribe";
+  (window.location.protocol === "https:" ? "wss://" : "ws://") + STT_HOST + "/ws/transcribe";
+
+export const API_BASE_URL = (window.location.protocol === "https:" ? "https://" : "http://") + STT_HOST;
 
 export class TranscriptionSocket {
   constructor({ url = DEFAULT_WS_URL, onPartial, onFinal, onError, onStatusChange } = {}) {
@@ -63,14 +52,12 @@ export class TranscriptionSocket {
     });
   }
 
-  /** Send a raw audio chunk (ArrayBuffer of 16-bit PCM samples) to the server. */
   sendAudioChunk(chunk) {
     if (this.socket && this.socket.readyState === WebSocket.OPEN) {
       this.socket.send(chunk);
     }
   }
 
-  /** Tell the server recording has stopped; triggers the final transcript. */
   sendStop() {
     if (this.socket && this.socket.readyState === WebSocket.OPEN) {
       this.socket.send(JSON.stringify({ type: "stop" }));
