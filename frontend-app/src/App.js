@@ -52,12 +52,11 @@ export default function App() {
   }, []);
 
   const handleStop = useCallback(() => {
-    socketRef.current?.sendStop();
-    setIsRecording(false);
-    // Give the server a moment to send back the final transcript
-    // before closing the socket.
-    setTimeout(() => socketRef.current?.close(), 1500);
-  }, []);
+  socketRef.current?.sendStop();
+  setIsRecording(false);
+  // Don't close immediately - wait for final transcript to arrive first
+  // The socket closes itself after receiving the final message
+}, []);
 
   return (
     <div className="mediscribe-app">
@@ -73,16 +72,16 @@ export default function App() {
       </header>
 
       <main className="app-main">
-        <h1>Voice-to-Notes</h1>
+        <h1>Clinical Dictation Assistant</h1>
         <p className="subtitle">
-          Dictate patient observations and prescriptions. AI transcribes your notes live.
-        </p>
+         Dictate patient observations and prescriptions. AI transcribes your notes live.
+       </p>
 
         <Recorder onAudioChunk={handleAudioChunk} onStart={handleStart} onStop={handleStop} />
 
         <LiveTranscript liveText={liveText} finalText={finalText} isRecording={isRecording} />
 
-        <p className="privacy-note">🔒 Audio processed locally. HIPAA-compliant architecture.</p>
+       
       </main>
     </div>
   );

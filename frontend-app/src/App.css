@@ -476,6 +476,75 @@
   margin: 26px 0 4px;
 }
 
+/* ---------- Save & PDF buttons ---------- */
+
+.save-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+  flex-wrap: wrap;
+}
+
+.btn-save {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  border: none;
+  color: #04201a;
+  font-weight: 700;
+  padding: 13px 22px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 14.5px;
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+  box-shadow: 0 8px 24px -8px rgba(45, 212, 167, 0.55);
+}
+
+.btn-save:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 30px -6px rgba(45, 212, 167, 0.7);
+}
+
+.btn-save:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-pdf {
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  color: var(--accent-2);
+  font-weight: 700;
+  padding: 13px 22px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 14.5px;
+  transition: all 0.15s ease;
+}
+
+.btn-pdf:hover {
+  background: rgba(56, 189, 248, 0.2);
+  transform: translateY(-1px);
+}
+
+.save-message {
+  font-size: 13px;
+  font-weight: 600;
+  margin-top: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+}
+
+.save-message.success {
+  color: var(--accent);
+  background: var(--accent-soft);
+  border: 1px solid rgba(45, 212, 167, 0.3);
+}
+
+.save-message.error {
+  color: #ffb4b4;
+  background: rgba(251, 106, 106, 0.1);
+  border: 1px solid rgba(251, 106, 106, 0.3);
+}
+
 /* ---------- Responsive ---------- */
 
 @media (max-width: 600px) {
@@ -484,4 +553,58 @@
   .app-main { padding: 26px 20px 22px; }
   .recorder-controls { gap: 10px; }
   .btn { padding: 12px 16px; font-size: 13.5px; }
+}
+
+
+/* ---------- Timing chips ---------- */
+
+.medication-block {
+  margin-bottom: 14px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.timing-dropdown-wrapper {
+  margin-top: 8px;
+}
+
+.timing-dropdown-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+}
+
+.timing-options {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.timing-chip {
+  padding: 8px 16px;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: "Inter", sans-serif;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-strong);
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.timing-chip:hover {
+  border-color: var(--accent);
+}
+
+.timing-chip.selected {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #04201a;
 }

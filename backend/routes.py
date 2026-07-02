@@ -1,16 +1,7 @@
 """
 routes.py
 ----------
-Defines the FastAPI HTTP + WebSocket routes for the Voice-to-Notes module.
-
-Main endpoint: WS /ws/transcribe
-  - Doctor's browser opens a WebSocket connection here.
-  - Browser streams raw 16-bit PCM audio chunks (binary frames) over the
-    socket as the doctor speaks.
-  - Server buffers the audio, periodically runs Faster-Whisper over the
-    buffer, and streams back partial transcripts.
-  - When the browser sends a {"type": "stop"} control message (JSON text
-    frame), the server finalizes the transcript and sends it back.
+All HTTP and WebSocket routes for MediScribe.
 """
 
 import json
@@ -24,6 +15,8 @@ from pydantic import BaseModel
 from stt_service import STTService, SAMPLE_RATE
 from websocket_manager import manager, PARTIAL_INTERVAL_SECONDS
 from prescription_service import generate_prescription
+from database import save_record, get_record
+from pdf_service import generate_prescription_pdf
 
 logger = logging.getLogger("routes")
 router = APIRouter()
@@ -45,6 +38,14 @@ class TranscriptRequest(BaseModel):
     transcript: str
 
 
+class SaveRecordRequest(BaseModel):
+    transcript: str
+    diagnosis: str = ""
+    symptoms: str = ""
+    follow_up: str = ""
+    medications: list = []
+
+
 @router.post("/generate-prescription")
 async def generate_prescription_endpoint(payload: TranscriptRequest):
     try:
@@ -53,6 +54,46 @@ async def generate_prescription_endpoint(payload: TranscriptRequest):
     except RuntimeError as e:
         from fastapi import HTTPException
         raise HTTPException(status_code=503, detail=str(e))
+
+
+@router.post("/save-record")
+async def save_record_endpoint(payload: SaveRecordRequest):
+    from fastapi import HTTPException
+    try:
+        record_id = save_record(
+            transcript=payload.transcript,
+            diagnosis=payload.diagnosis,
+            symptoms=payload.symptoms,
+            follow_up=payload.follow_up,
+            medications=payload.medications,
+        )
+        return {"record_id": record_id, "message": "Record saved successfully"}
+    except Exception as e:
+        logger.exception(f"Failed to save record: {e}")
+        raise HTTPException(status_code=500, detail="Failed to save record.")
+
+
+@router.get("/download-pdf/{record_id}")
+async def download_pdf_endpoint(record_id: int):
+    from fastapi import HTTPException
+    from fastapi.responses import Response
+
+    record = get_record(record_id)
+    if not record:
+        raise HTTPException(status_code=404, detail=f"Record {record_id} not found.")
+
+    try:
+        pdf_bytes = generate_prescription_pdf(record)
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f"attachment; filename=prescription_{record_id}.pdf"
+            }
+        )
+    except Exception as e:
+        logger.exception(f"Failed to generate PDF: {e}")
+        raise HTTPException(status_code=500, detail="Failed to generate PDF.")
 
 
 @router.websocket("/ws/transcribe")
@@ -69,7 +110,6 @@ async def websocket_transcribe(websocket: WebSocket):
                 pcm_chunk = pcm16_bytes_to_float32(message["bytes"])
                 manager.append_audio(session_id, pcm_chunk)
                 state = manager.get_session(session_id)
-
                 buffer_seconds = len(state.audio_buffer) / SAMPLE_RATE
 
                 if buffer_seconds >= MAX_BUFFER_SECONDS:
@@ -99,9 +139,9 @@ async def websocket_transcribe(websocket: WebSocket):
                         if text:
                             state.confirmed_transcript = f"{state.confirmed_transcript} {text}".strip()
                         state.audio_buffer = np.empty(0, dtype=np.float32)
-
                     await manager.send_transcript(session_id, state.confirmed_transcript, is_final=True)
                     logger.info(f"Session {session_id} finalized transcript.")
+                    break
 
     except WebSocketDisconnect:
         logger.info(f"Session {session_id} disconnected by client.")
@@ -110,3 +150,6 @@ async def websocket_transcribe(websocket: WebSocket):
         await manager.send_error(session_id, "Internal transcription error.")
     finally:
         manager.disconnect(session_id)
+
+
+        

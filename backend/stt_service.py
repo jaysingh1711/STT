@@ -101,8 +101,8 @@ class STTService:
             audio,
             language="en",
             beam_size=beam_size,
-            vad_filter=True,
-            vad_parameters=dict(min_silence_duration_ms=500),
+            vad_filter=False,
+            # vad_parameters=dict(min_silence_duration_ms=500),
             condition_on_previous_text=False,
         )
         text = " ".join(seg.text.strip() for seg in segments)

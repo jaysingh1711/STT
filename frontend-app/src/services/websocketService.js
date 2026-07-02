@@ -26,19 +26,21 @@ export class TranscriptionSocket {
       };
 
       this.socket.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          if (data.type === "partial") {
-            this.onPartial(data.text);
-          } else if (data.type === "final") {
-            this.onFinal(data.text);
-          } else if (data.type === "error") {
-            this.onError(data.message);
-          }
-        } catch (err) {
-          console.error("Failed to parse transcript message:", err);
-        }
-      };
+  try {
+    const data = JSON.parse(event.data);
+    if (data.type === "partial") {
+      this.onPartial(data.text);
+    } else if (data.type === "final") {
+      this.onFinal(data.text);
+      // Close AFTER final transcript received, not before
+      setTimeout(() => this.close(), 500);
+    } else if (data.type === "error") {
+      this.onError(data.message);
+    }
+  } catch (err) {
+    console.error("Failed to parse transcript message:", err);
+  }
+};
 
       this.socket.onerror = (err) => {
         this.onStatusChange("error");
