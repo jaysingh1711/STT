@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { API_BASE_URL } from "../services/websocketService";
 
 const TIMING_OPTIONS = ["Morning", "Afternoon", "Evening", "Night"];
+const GENDER_OPTIONS = ["Male", "Female", "Other"];
 
 function emptyMedication() {
   return { name: "", dosage: "", frequency: "", duration: "", timing: [] };
@@ -37,6 +38,9 @@ export default function LiveTranscript({ liveText, finalText, isRecording }) {
           : [emptyMedication()],
         diagnosis: data.diagnosis || "",
         follow_up: data.follow_up || "",
+        patient_name: data.patient_name || "",
+        patient_age: data.patient_age || "",
+        patient_gender: data.patient_gender || "",
       });
     } catch (err) {
       setGenError(err.message || "Could not generate prescription.");
@@ -57,6 +61,9 @@ export default function LiveTranscript({ liveText, finalText, isRecording }) {
           diagnosis: prescription.diagnosis,
           follow_up: prescription.follow_up,
           medications: prescription.medications,
+          patient_name: prescription.patient_name,
+          patient_age: prescription.patient_age,
+          patient_gender: prescription.patient_gender,
         }),
       });
       if (!res.ok) throw new Error("Failed to save record");
@@ -113,7 +120,6 @@ export default function LiveTranscript({ liveText, finalText, isRecording }) {
       <div className="panel-header">
         <h3>
           Live transcript
-          
         </h3>
         {isRecording && <span className="live-badge">LIVE</span>}
       </div>
@@ -163,6 +169,40 @@ export default function LiveTranscript({ liveText, finalText, isRecording }) {
             <div className="prescription-result">
               <div className="prescription-result-header">
                 <span className="ai-pill">AI draft — review before use</span>
+              </div>
+
+              <label className="field-label">Patient details</label>
+              <div className="medication-row">
+                <input
+                  className="field-input"
+                  placeholder="Patient name"
+                  value={prescription.patient_name}
+                  onChange={(e) =>
+                    setPrescription((p) => ({ ...p, patient_name: e.target.value }))
+                  }
+                />
+                <input
+                  className="field-input"
+                  placeholder="Age"
+                  value={prescription.patient_age}
+                  onChange={(e) =>
+                    setPrescription((p) => ({ ...p, patient_age: e.target.value }))
+                  }
+                />
+                <select
+                  className="field-input"
+                  value={prescription.patient_gender}
+                  onChange={(e) =>
+                    setPrescription((p) => ({ ...p, patient_gender: e.target.value }))
+                  }
+                >
+                  <option value="">Gender</option>
+                  {GENDER_OPTIONS.map((g) => (
+                    <option key={g} value={g}>
+                      {g}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <label className="field-label">Diagnosis</label>

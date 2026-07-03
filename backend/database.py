@@ -29,29 +29,53 @@ def init_db():
     try:
         conn.execute("""
             CREATE TABLE IF NOT EXISTS records (
-                id          INTEGER PRIMARY KEY AUTOINCREMENT,
-                created_at  TEXT NOT NULL,
-                transcript  TEXT NOT NULL,
-                diagnosis   TEXT,
-                symptoms    TEXT,
-                follow_up   TEXT,
-                medications TEXT
+                id             INTEGER PRIMARY KEY AUTOINCREMENT,
+                created_at     TEXT NOT NULL,
+                transcript     TEXT NOT NULL,
+                diagnosis      TEXT,
+                symptoms       TEXT,
+                follow_up      TEXT,
+                medications    TEXT,
+                patient_name   TEXT,
+                patient_age    TEXT,
+                patient_gender TEXT
             )
         """)
         conn.commit()
+
+        # Migration: if records.db already existed before this update,
+        # the CREATE TABLE above is a no-op (table already exists) and
+        # won't add the new columns. This adds them safely if missing.
+        existing_cols = {row["name"] for row in conn.execute("PRAGMA table_info(records)")}
+        migrations = {
+            "patient_name":   "ALTER TABLE records ADD COLUMN patient_name TEXT",
+            "patient_age":    "ALTER TABLE records ADD COLUMN patient_age TEXT",
+            "patient_gender": "ALTER TABLE records ADD COLUMN patient_gender TEXT",
+        }
+        for col, ddl in migrations.items():
+            if col not in existing_cols:
+                conn.execute(ddl)
+                logger.info(f"Migrated records table: added column '{col}'")
+        conn.commit()
+
         logger.info(f"Database ready at {DB_PATH}")
     finally:
         conn.close()
 
 
 def save_record(transcript: str, diagnosis: str, symptoms: str,
-                follow_up: str, medications: list) -> int:
+                follow_up: str, medications: list,
+                patient_name: str = "", patient_age: str = "",
+                patient_gender: str = "") -> int:
     conn = get_connection()
     try:
         cursor = conn.execute(
             """
-            INSERT INTO records (created_at, transcript, diagnosis, symptoms, follow_up, medications)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO records (
+                created_at, transcript, diagnosis, symptoms, follow_up,
+                medications, patient_name, patient_age, patient_gender
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -60,6 +84,9 @@ def save_record(transcript: str, diagnosis: str, symptoms: str,
                 symptoms,
                 follow_up,
                 json.dumps(medications),
+                patient_name,
+                patient_age,
+                patient_gender,
             )
         )
         conn.commit()

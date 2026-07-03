@@ -18,6 +18,7 @@ OLLAMA_MODEL = "llama3.2"
 REQUEST_TIMEOUT_SECONDS = 60.0
 
 VALID_TIMING_SLOTS = ["Morning", "Afternoon", "Evening", "Night"]
+VALID_GENDERS = {"Male", "Female", "Other"}
 
 
 class Medication(TypedDict):
@@ -32,6 +33,9 @@ class PrescriptionResult(TypedDict):
     medications: List[Medication]
     diagnosis: str
     follow_up: str
+    patient_name: str
+    patient_age: str
+    patient_gender: str
     raw_notes: str
 
 
@@ -39,6 +43,9 @@ _EXTRACTION_PROMPT = """You are a clinical documentation assistant. Extract stru
 
 Return ONLY valid JSON, no extra commentary, in exactly this shape:
 {{
+  "patient_name": "",
+  "patient_age": "",
+  "patient_gender": "",
   "medications": [
     {{"name": "", "dosage": "", "frequency": "", "duration": "", "timing": []}}
   ],
@@ -48,6 +55,9 @@ Return ONLY valid JSON, no extra commentary, in exactly this shape:
 
 Rules:
 - Only include information the doctor explicitly said. Never invent or infer.
+- "patient_name" is the patient's full name exactly as stated. Use "" if not mentioned.
+- "patient_age" is the age as a plain number string (e.g. "30"), with no extra words. Use "" if not mentioned.
+- "patient_gender" must be exactly one of "Male", "Female", "Other", or "" if not mentioned or not inferable from explicit wording.
 - "frequency" should describe HOW OFTEN or the pattern (e.g. "twice a day", "every 6 hours", "as needed") -- do NOT repeat specific times of day here if "timing" already captures them.
 - "timing" must be an array containing only values from this exact list: ["Morning", "Afternoon", "Evening", "Night"].
 - If the doctor named specific times of day (e.g. "morning and evening"), put ONLY the count/pattern in "frequency" (e.g. "twice a day") and put the actual times in "timing" (e.g. ["Morning", "Evening"]). Do not duplicate the time names in both fields.
@@ -58,10 +68,13 @@ Rules:
 - If a field was not mentioned, use "" (or [] for medications/timing).
 
 EXAMPLE:
-Doctor's notes: "patient has fever and sore throat, diagnosis is viral pharyngitis, prescribe amoxicillin 500mg three times a day for 7 days, morning afternoon and evening, advise rest and fluids, follow up in one week"
+Doctor's notes: "patient name is Rahul Sharma age 30 years, has fever and sore throat, diagnosis is viral pharyngitis, prescribe amoxicillin 500mg three times a day for 7 days, morning afternoon and evening, advise rest and fluids, follow up in one week"
 
 Correct output:
 {{
+  "patient_name": "Rahul Sharma",
+  "patient_age": "30",
+  "patient_gender": "",
   "medications": [
     {{"name": "amoxicillin", "dosage": "500mg", "frequency": "three times a day", "duration": "7 days", "timing": ["Morning", "Afternoon", "Evening"]}}
   ],
@@ -80,8 +93,18 @@ def _sanitize_timing(timing_list) -> List[str]:
     return [slot for slot in VALID_TIMING_SLOTS if slot in timing_list]
 
 
+def _sanitize_gender(gender) -> str:
+    if isinstance(gender, str) and gender in VALID_GENDERS:
+        return gender
+    return ""
+
+
 async def generate_prescription(transcript: str) -> PrescriptionResult:
-    empty = PrescriptionResult(medications=[], diagnosis="", follow_up="", raw_notes=transcript)
+    empty = PrescriptionResult(
+        medications=[], diagnosis="", follow_up="",
+        patient_name="", patient_age="", patient_gender="",
+        raw_notes=transcript,
+    )
     if not transcript.strip():
         return empty
 
@@ -124,6 +147,9 @@ async def generate_prescription(transcript: str) -> PrescriptionResult:
         medications=medications,
         diagnosis=parsed.get("diagnosis", "") or "",
         follow_up=parsed.get("follow_up", "") or "",
+        patient_name=parsed.get("patient_name", "") or "",
+        patient_age=str(parsed.get("patient_age", "") or ""),
+        patient_gender=_sanitize_gender(parsed.get("patient_gender", "")),
         raw_notes=transcript,
     )
 

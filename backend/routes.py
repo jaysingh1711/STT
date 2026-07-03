@@ -44,6 +44,9 @@ class SaveRecordRequest(BaseModel):
     symptoms: str = ""
     follow_up: str = ""
     medications: list = []
+    patient_name: str = ""
+    patient_age: str = ""
+    patient_gender: str = ""
 
 
 @router.post("/generate-prescription")
@@ -66,6 +69,9 @@ async def save_record_endpoint(payload: SaveRecordRequest):
             symptoms=payload.symptoms,
             follow_up=payload.follow_up,
             medications=payload.medications,
+            patient_name=payload.patient_name,
+            patient_age=payload.patient_age,
+            patient_gender=payload.patient_gender,
         )
         return {"record_id": record_id, "message": "Record saved successfully"}
     except Exception as e:
@@ -150,6 +156,3 @@ async def websocket_transcribe(websocket: WebSocket):
         await manager.send_error(session_id, "Internal transcription error.")
     finally:
         manager.disconnect(session_id)
-
-
-        
